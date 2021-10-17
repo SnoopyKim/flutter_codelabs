@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -47,12 +48,12 @@ class ReplyRouterDelegate extends RouterDelegate<ReplyRoutePath>
             onPopPage: _handlePopPage,
             pages: [
               // TODO: Add Shared Z-Axis transition from search icon to search view page (Motion)
-              const CustomTransitionPage(
+              const SharedAxisTransitionPageWrapper(
                 transitionKey: ValueKey('Home'),
                 screen: HomePage(),
               ),
               if (routePath is ReplySearchPath)
-                const CustomTransitionPage(
+                const SharedAxisTransitionPageWrapper(
                   transitionKey: ValueKey('Search'),
                   screen: SearchPage(),
                 ),
@@ -67,8 +68,7 @@ class ReplyRouterDelegate extends RouterDelegate<ReplyRoutePath>
     // _handlePopPage should not be called on the home page because the
     // PopNavigatorRouterDelegateMixin will bubble up the pop to the
     // SystemNavigator if there is only one route in the navigator.
-    assert(route.willHandlePopInternally ||
-        replyState.routePath is ReplySearchPath);
+    assert(route.willHandlePopInternally || replyState.routePath is ReplySearchPath);
 
     final bool didPop = route.didPop(result);
     if (didPop) replyState.routePath = const ReplyHomePath();
@@ -96,12 +96,35 @@ class ReplySearchPath extends ReplyRoutePath {
 }
 
 // TODO: Add Shared Z-Axis transition from search icon to search view page (Motion)
+class SharedAxisTransitionPageWrapper extends Page {
+  const SharedAxisTransitionPageWrapper({required this.screen, required this.transitionKey})
+      : super(key: transitionKey);
 
-class ReplyRouteInformationParser
-    extends RouteInformationParser<ReplyRoutePath> {
+  final Widget screen;
+  final ValueKey transitionKey;
+
   @override
-  Future<ReplyRoutePath> parseRouteInformation(
-      RouteInformation routeInformation) async {
+  Route createRoute(BuildContext context) {
+    return PageRouteBuilder(
+        settings: this,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SharedAxisTransition(
+            fillColor: Theme.of(context).cardColor,
+            animation: animation,
+            secondaryAnimation: secondaryAnimation,
+            transitionType: SharedAxisTransitionType.scaled,
+            child: child,
+          );
+        },
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return screen;
+        });
+  }
+}
+
+class ReplyRouteInformationParser extends RouteInformationParser<ReplyRoutePath> {
+  @override
+  Future<ReplyRoutePath> parseRouteInformation(RouteInformation routeInformation) async {
     final url = Uri.parse(routeInformation.location!);
 
     if (url.path == _searchPageLocation) {
